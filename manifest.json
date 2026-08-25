@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "yuler.omaports",
+  "name": "Omaports",
+  "version": "1.0.0",
+  "author": "yuler",
+  "license": "MIT",
+  "description": "Find open TCP ports and close them from the Omarchy bar and command overlay.",
+  "kinds": ["bar-widget", "overlay"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "overlay": "Overlay.qml"
+  },
+  "barWidget": {
+    "displayName": "Omaports",
+    "description": "Listening ports on the bar, with a panel to open, copy, or kill them.",
+    "category": "Developer Tools",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "killSignal": "TERM",
+      "includeUdp": false,
+      "includeDocker": true,
+      "ignoredPorts": "53,631,5353",
+      "httpsPorts": "443,8443",
+      "refreshIntervalSec": 5
+    },
+    "schema": [
+      {
+        "key": "killSignal",
+        "type": "enum",
+        "label": "Kill signal",
+        "options": ["TERM", "KILL"],
+        "defaultValue": "TERM",
+        "description": "Signal sent after you confirm. Always asks first."
+      },
+      {
+        "key": "includeDocker",
+        "type": "enum",
+        "label": "Docker published ports",
+        "options": ["On", "Off"],
+        "defaultValue": "On"
+      },
+      {
+        "key": "includeUdp",
+        "type": "enum",
+        "label": "Include UDP",
+        "options": ["Off", "On"],
+        "defaultValue": "Off"
+      },
+      {
+        "key": "ignoredPorts",
+        "type": "string",
+        "label": "Ignored ports",
+        "defaultValue": "53,631,5353"
+      },
+      {
+        "key": "httpsPorts",
+        "type": "string",
+        "label": "HTTPS ports",
+        "defaultValue": "443,8443"
+      },
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 2,
+        "max": 120,
+        "step": 1,
+        "defaultValue": 5
+      }
+    ]
+  }
+}
