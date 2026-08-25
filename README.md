@@ -1,6 +1,8 @@
 # Omaports
 
-Find open TCP ports and close them from the Omarchy bar and a Raycast-style overlay.
+Find open TCP ports and close them from the Omarchy bar.
+
+![Port Manager overlay](docs/overlay.png)
 
 ## Install
 
@@ -22,9 +24,10 @@ That replaces a previously copied `~/.config/omarchy/plugins/yuler.omaports` wit
 make test       # Model.js unit tests
 make validate   # tests + omarchy plugin validate
 make unlink     # remove the symlink only
+make restart    # omarchy restart shell
 ```
 
-Summon the overlay:
+Summon the overlay (larger centered window, same content as the bar panel):
 
 ```sh
 omarchy-shell shell toggle yuler.omaports
@@ -33,21 +36,34 @@ omarchy-shell shell toggle yuler.omaports
 Suggested Hyprland binding (`~/.config/hypr/bindings.lua`):
 
 ```lua
-o.bind("SUPER + ALT + P", "Omaports", "omarchy-shell shell toggle yuler.omaports")
+o.bind("SUPER + CTRL + P", "Port Manager", "omarchy-shell shell toggle yuler.omaports")
 ```
 
 ## Usage
 
-- **Bar**: left click opens the port list. Right click refreshes. The icon turns urgent when a listener is bound beyond loopback.
-- **Overlay commands**: Open Ports, Kill Process Listening on, Named Ports.
-- **Enter** opens `http(s)://localhost:<port>`.
-- **Ctrl+Y** copies the URL.
-- **Ctrl+T** opens a terminal in the process working directory.
-- **Ctrl+X** kills after a confirmation dialog (or `docker stop` for published container ports).
-- **Ctrl+R** (overlay) reveals the executable.
-- Named Ports: type `3000=Next.js` and press Enter. Names live in `~/.local/state/omarchy/omaports/names.json`.
+- **Bar**: Port Manager mark (RJ45 jack with a slash, theme-colored — not the network ethernet glyph). Left click opens the panel. Right click refreshes.
+- **Panel / overlay**: icon + **Port Manager** + port count, then search and the port list. Super+Ctrl+P opens the larger centered overlay; shortcuts are the same as the bar panel.
 
-Kill always asks first. Only the current user's processes are signaled, after checking `/proc` uid and start time. Docker stop runs only when you already have permission to talk to the daemon.
+Kill always asks first. Only the current user's processes are signaled, after checking `/proc` uid and start time. Docker stop runs only when you already have permission to talk to the daemon. Names live in `~/.local/state/omarchy/omaports/names.json`.
+
+## Keyboard shortcuts
+
+Search starts focused. **Tab** switches focus between search and the list (the active pane gets a border). **j** / **k** and the arrows move in the list. Single-letter actions apply once the list is focused.
+
+| Key | Action |
+| --- | --- |
+| Type | Filter ports (search focused) |
+| Tab / Shift+Tab | Switch focus between search and list |
+| ↓ / j | Next row (from search, ↓ enters the list) |
+| ↑ / k | Previous row (from the first row, ↑ returns to search) |
+| Enter | Open the selected port in a browser (`http(s)://localhost:<port>`) |
+| y or c | Copy the URL |
+| t | Open a terminal in the process working directory |
+| x or K | Kill / stop (confirmation; `docker stop` for published container ports). **k** still moves up; **K** (Shift+k) kills |
+| r | Refresh |
+| Esc | Clear search, or close |
+
+Bottom of the panel shows a short hint for the current focus.
 
 ## Configure
 

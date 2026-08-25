@@ -14,8 +14,6 @@ BarWidget {
 
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
   readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
-  readonly property int portCount: collector.count
-  readonly property string displayText: root.vertical ? "" : ("󰛳" + (portCount > 0 ? " " + portCount : ""))
 
   function open() {
     if (panelLoader.item) panelLoader.item.open()
@@ -138,13 +136,21 @@ BarWidget {
     function refresh(): void { collector.refresh() }
   }
 
-  WidgetButton {
+  BarIconButton {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.displayText
-    active: collector.exposed
-    tooltipText: collector.errorText || (portCount === 1 ? "1 open port" : portCount + " open ports")
+    text: ""
+    active: false
+    iconComponent: Component {
+      PortIcon {
+        iconSize: Style.bar.iconCanvas
+        fontSize: Style.bar.iconFont + 2
+        fontFamily: button.fontFamily
+        color: button.foreground
+      }
+    }
+    tooltipText: collector.errorText || "Port Manager"
     onPressed: function(b) {
       if (b === Qt.RightButton) collector.refresh()
       else root.togglePanel()

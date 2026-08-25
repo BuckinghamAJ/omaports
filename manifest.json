@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "yuler.omaports",
-  "name": "Omaports",
+  "name": "Port Manager",
   "version": "1.0.0",
   "author": "yuler",
   "license": "MIT",
-  "description": "Find open TCP ports and close them from the Omarchy bar and command overlay.",
+  "description": "Find open TCP ports and close them from the Omarchy bar and overlay.",
   "kinds": ["bar-widget", "overlay"],
   "keepLoaded": true,
   "entryPoints": {
@@ -13,8 +13,8 @@
     "overlay": "Overlay.qml"
   },
   "barWidget": {
-    "displayName": "Omaports",
-    "description": "Listening ports on the bar, with a panel to open, copy, or kill them.",
+    "displayName": "Port Manager",
+    "description": "Listening ports on the bar. Open a port with Enter, or kill it with x.",
     "category": "Developer Tools",
     "allowMultiple": false,
     "defaultSection": "right",

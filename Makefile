@@ -3,7 +3,7 @@ PLUGIN_DIR ?= $(HOME)/.config/omarchy/plugins/$(PLUGIN_ID)
 REPO       := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SHELL      := /bin/bash
 
-.PHONY: link unlink test validate enable disable
+.PHONY: link unlink test validate enable disable restart
 
 # Point Omarchy at this checkout. The plugins dir entry is a symlink to the
 # repo; files inside the repo stay real. Validate forbids symlinks *inside*
@@ -40,3 +40,6 @@ enable: link
 
 disable:
 	omarchy plugin disable "$(PLUGIN_ID)"
+
+restart:
+	omarchy restart shell
