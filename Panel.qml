@@ -43,7 +43,10 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: view.searchInput
-    contentWidth: panel.fittedContentWidth(Style.space(420))
+    contentWidth: {
+      var chrome = panel.padding * 2 + Border.left(panel.borderSpec) + Border.right(panel.borderSpec)
+      return panel.fittedContentWidth(Math.max(Style.space(420), view.preferredHintWidth + chrome + Style.space(12)))
+    }
     contentHeight: panel.fittedContentHeight(Style.space(380))
 
     PortManagerView {

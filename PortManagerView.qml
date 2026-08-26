@@ -42,12 +42,23 @@ Item {
     if (selectedRow) {
       items = items.concat([
         { keys: ["Enter"], label: "open" },
-        { keys: ["y"], label: "copy" },
-        { keys: ["x"], label: "kill" }
+        { keys: ["y/c"], label: "copy" },
+        { keys: ["x/K"], label: "kill" }
       ])
     }
+    items.push({ keys: ["r"], label: "refresh" })
     return items
   }
+
+  readonly property var fullHintItems: [
+    { keys: ["Tab"], label: "search" },
+    { keys: ["↑/↓/j/k"], label: "move" },
+    { keys: ["Enter"], label: "open" },
+    { keys: ["y/c"], label: "copy" },
+    { keys: ["x/K"], label: "kill" },
+    { keys: ["r"], label: "refresh" }
+  ]
+  readonly property int preferredHintWidth: Math.ceil(hintMeasureRow.implicitWidth)
 
   readonly property var rows: Model.filterListeners(collector ? collector.listeners : [], filterText)
   readonly property int portCount: collector && collector.listeners ? collector.listeners.length : 0
@@ -239,6 +250,43 @@ Item {
     interval: 80
     repeat: false
     onTriggered: if (!root.cursorActive) root.focusSearch()
+  }
+
+  Row {
+    id: hintMeasureRow
+    x: -10000
+    y: -10000
+    spacing: Style.space(8)
+    opacity: 0
+
+    Repeater {
+      model: root.fullHintItems
+
+      delegate: Row {
+        id: measureGroup
+        required property var modelData
+        spacing: Style.space(3)
+
+        Repeater {
+          model: measureGroup.modelData.keys || []
+
+          delegate: HintKbd {
+            required property var modelData
+            key: String(modelData)
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+          }
+        }
+
+        Text {
+          text: String(measureGroup.modelData.label || "")
+          color: root.contentForeground
+          font.family: root.contentFontFamily
+          font.pixelSize: Style.font.caption
+          textFormat: Text.PlainText
+        }
+      }
+    }
   }
 
   PanelKeyCatcher {
@@ -463,9 +511,8 @@ Item {
         textFormat: Text.PlainText
       }
 
-      Flow {
+      Row {
         id: hint
-        width: parent.width
         visible: root.statusText === ""
         height: visible ? implicitHeight : 0
         spacing: Style.space(8)

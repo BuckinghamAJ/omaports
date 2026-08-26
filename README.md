@@ -54,21 +54,20 @@ Kill always asks first. Only the current user's processes are signaled, after ch
 
 ## Keyboard shortcuts
 
-Search starts focused. **Tab** switches focus between search and the list (the active pane gets a border). **j** / **k** and the arrows move in the list. Single-letter actions apply once the list is focused.
+Search starts focused. **Tab** switches focus between search and the list (the active pane gets a border). Arrows and **j/k** move in the list. Single-letter actions apply once the list is focused.
 
 | Key | Action |
 | --- | --- |
 | Type | Filter ports (search focused) |
-| Tab / Shift+Tab | Switch focus between search and list |
-| ↓ / j | Next row (from search, ↓ enters the list) |
-| ↑ / k | Previous row (from the first row, ↑ returns to search) |
+| Tab | Switch focus between search and list |
+| ↑/↓/j/k | Move in the list (from search, ↓ enters the list; from the first row, ↑ returns to search) |
 | Enter | Open the selected port in a browser (`http(s)://localhost:<port>`) |
-| y or c | Copy the URL |
-| x or K | Kill / stop (confirmation; `docker stop` for published container ports). **k** still moves up; **K** (Shift+k) kills |
+| y/c | Copy the URL |
+| x/K | Kill / stop (confirmation; `docker stop` for published container ports). Lowercase **k** still moves up; **K** (Shift+k) kills |
 | r | Refresh |
 | Esc | Clear search, or close |
 
-The footer follows focus. Search shows **Tab**. The list shows **Tab**, **↑/↓/j/k** move, and only after a row is selected also Enter / y / x.
+The footer follows focus. Search shows **Tab**. The list shows **Tab**, **↑/↓/j/k** move, then **r** refresh last; only after a row is selected also Enter / y/c / x/K before refresh.
 
 ## Configure
 
