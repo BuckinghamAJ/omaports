@@ -2,7 +2,13 @@
 
 Find open TCP ports and close them from the Omarchy bar.
 
-![Port Manager overlay](docs/overlay.png)
+Bar panel (drops from the Port Manager mark in the Omarchy bar):
+
+![Port Manager bar panel](assets/bar.png)
+
+Centered overlay (same content, larger window; Super+Ctrl+P):
+
+![Port Manager overlay](assets/overlay.png)
 
 ## Install
 
@@ -58,12 +64,11 @@ Search starts focused. **Tab** switches focus between search and the list (the a
 | ↑ / k | Previous row (from the first row, ↑ returns to search) |
 | Enter | Open the selected port in a browser (`http(s)://localhost:<port>`) |
 | y or c | Copy the URL |
-| t | Open a terminal in the process working directory |
 | x or K | Kill / stop (confirmation; `docker stop` for published container ports). **k** still moves up; **K** (Shift+k) kills |
 | r | Refresh |
 | Esc | Clear search, or close |
 
-Bottom of the panel shows a short hint for the current focus.
+The footer follows focus. Search shows **Tab**. The list shows **Tab**, **↑/↓/j/k** move, and only after a row is selected also Enter / y / x.
 
 ## Configure
 
@@ -79,4 +84,4 @@ omarchy plugin remove yuler.omaports
 
 - `ss` (iproute2) — required
 - `docker` — optional, for published container ports
-- `xdg-open`, `wl-copy`, `xdg-terminal-exec` — optional actions
+- `xdg-open`, `wl-copy` — optional actions

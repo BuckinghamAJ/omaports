@@ -24,10 +24,29 @@ Item {
   property string statusText: ""
   readonly property bool searchFocused: !!(searchField && searchField.activeFocus)
   readonly property bool listFocused: !searchFocused && cursorActive
-  readonly property string hintText: {
-    if (statusText) return statusText
-    if (searchFocused) return "Tab list"
-    return "j/k · Enter · y copy · x kill · t terminal"
+  readonly property var selectedRow: {
+    if (!listFocused) return null
+    if (selectedIndex < 0 || selectedIndex >= rows.length) return null
+    return rows[selectedIndex]
+  }
+  readonly property var hintItems: {
+    if (!listFocused) {
+      return [
+        { keys: ["Tab"], label: "list" }
+      ]
+    }
+    var items = [
+      { keys: ["Tab"], label: "search" },
+      { keys: ["↑/↓/j/k"], label: "move" }
+    ]
+    if (selectedRow) {
+      items = items.concat([
+        { keys: ["Enter"], label: "open" },
+        { keys: ["y"], label: "copy" },
+        { keys: ["x"], label: "kill" }
+      ])
+    }
+    return items
   }
 
   readonly property var rows: Model.filterListeners(collector ? collector.listeners : [], filterText)
@@ -47,6 +66,7 @@ Item {
     selectedIndex = 0
     cursorActive = false
     confirmOpen = false
+    pendingRow = null
     statusText = ""
     statusClear.stop()
     if (collector) collector.refresh()
@@ -147,16 +167,6 @@ Item {
     flashStatus("Copied")
   }
 
-  function terminalRow(row) {
-    if (!row || !row.cwd) {
-      flashStatus("No working directory")
-      return
-    }
-    termProc.workingDirectory = row.cwd
-    termProc.running = false
-    termProc.running = true
-  }
-
   function askKill(row) {
     if (!row) return
     if (row.kind !== "container" && !Model.canKillRow(row, uid)) {
@@ -165,17 +175,24 @@ Item {
     }
     pendingRow = row
     confirmOpen = true
+    confirmDialog.selectedIndex = 1
+    Qt.callLater(function() { if (confirmDialog) confirmDialog.forceActiveFocus() })
   }
 
-  function cancelKill() {
+  function cancelPending() {
     confirmOpen = false
     pendingRow = null
+    Qt.callLater(root.focusList)
   }
 
-  function confirmKill() {
+  function confirmPending() {
     var row = pendingRow
     confirmOpen = false
     pendingRow = null
+    root.runKill(row)
+  }
+
+  function runKill(row) {
     if (!row) return
     if (row.kind === "container") {
       stopProc.command = ["docker", "stop", row.containerId]
@@ -190,12 +207,6 @@ Item {
     killProc.command = ["kill", "-" + killSig, String(row.pid)]
     killProc.running = false
     killProc.running = true
-  }
-
-  Process {
-    id: termProc
-    command: ["xdg-terminal-exec"]
-    running: false
   }
 
   Process {
@@ -233,7 +244,7 @@ Item {
   PanelKeyCatcher {
     id: keyCatcher
     anchors.fill: parent
-    blocked: root.confirmOpen || (searchField && searchField.activeFocus)
+    blocked: root.confirmOpen || !!(searchField && searchField.activeFocus)
 
     onMoveRequested: function(dx, dy) {
       if (root.confirmOpen) {
@@ -244,14 +255,14 @@ Item {
     }
     onActivateRequested: {
       if (root.confirmOpen) {
-        if (confirmDialog.selectedIndex === 0) root.cancelKill()
-        else root.confirmKill()
+        if (confirmDialog.selectedIndex === 0) root.cancelPending()
+        else root.confirmPending()
         return
       }
       root.openRow(root.currentRow())
     }
     onCloseRequested: {
-      if (root.confirmOpen) root.cancelKill()
+      if (root.confirmOpen) root.cancelPending()
       else root.closeRequested()
     }
     onTabRequested: function(direction) {
@@ -268,7 +279,6 @@ Item {
       var key = raw.toLowerCase()
       if (raw === "K") root.askKill(root.currentRow())
       else if (key === "y" || key === "c") root.copyRow(root.currentRow())
-      else if (key === "t") root.terminalRow(root.currentRow())
       else if (key === "r") { if (collector) collector.refresh() }
     }
 
@@ -277,6 +287,7 @@ Item {
       anchors.fill: parent
       opened: root.confirmOpen
       z: 10
+      focus: root.confirmOpen
       message: root.pendingRow ? Model.confirmMessage(root.pendingRow, root.killSig) : ""
       confirmText: root.pendingRow && root.pendingRow.kind === "container" ? "Stop" : "Kill"
       background: Color.menu.background
@@ -286,8 +297,12 @@ Item {
       selectedText: Color.menu.selectedText
       fontFamily: root.contentFontFamily
       cornerRadius: Style.cornerRadius
-      onCanceled: root.cancelKill()
-      onConfirmed: root.confirmKill()
+      Keys.priority: Keys.BeforeItem
+      Keys.onPressed: function(event) {
+        if (confirmDialog.handleKey(event)) event.accepted = true
+      }
+      onCanceled: root.cancelPending()
+      onConfirmed: root.confirmPending()
     }
 
     Column {
@@ -379,7 +394,7 @@ Item {
       Item {
         id: listPane
         width: parent.width
-        height: Math.max(Style.space(80), column.height - hero.height - searchPane.height - rule.height - hint.height - column.spacing * 4)
+        height: Math.max(Style.space(80), column.height - hero.height - searchPane.height - rule.height - hint.height - hintStatus.height - column.spacing * 5)
 
         BorderSurface {
           anchors.fill: parent
@@ -436,14 +451,55 @@ Item {
       }
 
       Text {
-        id: hint
+        id: hintStatus
         width: parent.width
-        text: root.hintText
+        visible: root.statusText !== ""
+        height: visible ? implicitHeight : 0
+        text: root.statusText
         color: Qt.darker(root.contentForeground, 1.5)
         font.family: root.contentFontFamily
         font.pixelSize: Style.font.caption
         elide: Text.ElideRight
         textFormat: Text.PlainText
+      }
+
+      Flow {
+        id: hint
+        width: parent.width
+        visible: root.statusText === ""
+        height: visible ? implicitHeight : 0
+        spacing: Style.space(8)
+
+        Repeater {
+          model: root.hintItems
+
+          delegate: Row {
+            id: group
+            required property var modelData
+            spacing: Style.space(3)
+
+            Repeater {
+              model: group.modelData.keys || []
+
+              delegate: HintKbd {
+                required property var modelData
+                key: String(modelData)
+                foreground: root.contentForeground
+                fontFamily: root.contentFontFamily
+              }
+            }
+
+            Text {
+              visible: String(group.modelData.label || "") !== ""
+              text: String(group.modelData.label || "")
+              color: Qt.darker(root.contentForeground, 1.5)
+              font.family: root.contentFontFamily
+              font.pixelSize: Style.font.caption
+              anchors.verticalCenter: parent.verticalCenter
+              textFormat: Text.PlainText
+            }
+          }
+        }
       }
     }
   }
