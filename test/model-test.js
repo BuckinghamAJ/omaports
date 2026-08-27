@@ -58,6 +58,22 @@ assert.equal(Model.canSignalProcess({ pid: 4242, uid: 0, startTime: 99 }, 1000, 
 assert.equal(Model.canSignalProcess({ pid: 4242, uid: 1000, startTime: 1 }, 1000, 99), false)
 assert.equal(Model.canSignalProcess({ pid: 4242, uid: 1000, startTime: 99 }, 1000, 98), false)
 
+assert.equal(Model.liveIdentityMatches({ pid: 4242, uid: 1000, startTime: 99 }, 1000, 99, 1000), true)
+assert.equal(Model.liveIdentityMatches({ pid: 4242, uid: 1000, startTime: 99 }, 1000, 100, 1000), false)
+assert.equal(Model.liveIdentityMatches({ pid: 4242, uid: 1000, startTime: 99 }, 0, 99, 1000), false)
+
+var overflowSs = []
+for (var i = 0; i < Model.MAX_ROWS + 40; i++) {
+  overflowSs.push("LISTEN 0 1 127.0.0.1:" + (3000 + (i % 40000)) + " 0.0.0.0:* users:((\"n\",pid=" + (100 + i) + ",fd=1))")
+}
+assert.equal(Model.parseSs(overflowSs.join("\n")).length, Model.MAX_ROWS)
+
+var overflowDocker = []
+for (var d = 0; d < Model.MAX_ROWS + 10; d++) {
+  overflowDocker.push("id" + d + "\tc" + d + "\t0.0.0.0:" + (4000 + (d % 20000)) + "->80/tcp")
+}
+assert.equal(Model.parseDockerPs(overflowDocker.join("\n")).length, Model.MAX_ROWS)
+
 assert.equal(Model.killSignal("KILL"), "KILL")
 assert.equal(Model.killSignal("TERM"), "TERM")
 assert.equal(Model.killSignal("nope"), "TERM")

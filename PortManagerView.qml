@@ -203,6 +203,30 @@ Item {
     root.runKill(row)
   }
 
+  // Same-invocation check: live /proc Uid + stat starttime (field 20 after last ")")
+  // must match the confirmed row before signaling. $1 pid, $2 uid, $3 start, $4 TERM|KILL.
+  readonly property string killScript: [
+    "pid=$1; want_uid=$2; want_start=$3; sig=$4",
+    "if [ \"$pid\" -le 1 ] 2>/dev/null; then exit 1; fi",
+    "status=$(cat \"/proc/$pid/status\") || exit 1",
+    "stat=$(cat \"/proc/$pid/stat\") || exit 1",
+    "live_uid=",
+    "while IFS= read -r line; do",
+    "  case \"$line\" in",
+    "    Uid:*) set -- $line; live_uid=$2; break ;;",
+    "  esac",
+    "done <<EOF",
+    "$status",
+    "EOF",
+    "rest=${stat##*)}",
+    "set -- $rest",
+    "live_start=${20}",
+    "[ -n \"$live_uid\" ] && [ -n \"$live_start\" ] || exit 1",
+    "[ \"$live_uid\" = \"$want_uid\" ] || exit 1",
+    "[ \"$live_start\" = \"$want_start\" ] || exit 1",
+    "exec kill -s \"$sig\" \"$pid\""
+  ].join("\n")
+
   function runKill(row) {
     if (!row) return
     if (row.kind === "container") {
@@ -215,7 +239,16 @@ Item {
       flashStatus("Refusing to signal this process")
       return
     }
-    killProc.command = ["kill", "-" + killSig, String(row.pid)]
+    killProc.command = [
+      "sh",
+      "-c",
+      killScript,
+      "omaports-kill",
+      String(row.pid),
+      String(collector.uid),
+      String(row.startTime),
+      killSig
+    ]
     killProc.running = false
     killProc.running = true
   }

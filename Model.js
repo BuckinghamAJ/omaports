@@ -1,5 +1,12 @@
 // Pure listener math for Omaports. Qt-free so node can unit-test it.
 
+var MAX_ROWS = 256
+var MAX_OUTPUT_BYTES = 262144
+
+function maxOutputBytes() {
+  return MAX_OUTPUT_BYTES
+}
+
 var COMMANDS = [
   {
     id: "open-ports",
@@ -105,6 +112,7 @@ function parseSs(raw) {
       containerName: "",
       label: ""
     })
+    if (out.length >= MAX_ROWS) break
   }
   return out
 }
@@ -247,6 +255,14 @@ function canSignalProcess(proc, currentUid, expectedStartTime) {
   return true
 }
 
+function liveIdentityMatches(row, liveUid, liveStartTime, currentUid) {
+  return canSignalProcess(
+    { pid: row && row.pid, uid: liveUid, startTime: liveStartTime },
+    currentUid,
+    row && row.startTime
+  )
+}
+
 function killSignal(value) {
   return String(value || "").toUpperCase() === "KILL" ? "KILL" : "TERM"
 }
@@ -313,6 +329,7 @@ function parseDockerPs(raw) {
         containerName: name,
         label: ""
       })
+      if (out.length >= MAX_ROWS) return out
     }
   }
   return out
@@ -529,6 +546,9 @@ function parseSettings(raw) {
 
 if (typeof module !== "undefined") {
   module.exports = {
+    MAX_ROWS: MAX_ROWS,
+    MAX_OUTPUT_BYTES: MAX_OUTPUT_BYTES,
+    maxOutputBytes: maxOutputBytes,
     COMMANDS: COMMANDS,
     parsePort: parsePort,
     parsePortQuery: parsePortQuery,
@@ -545,6 +565,7 @@ if (typeof module !== "undefined") {
     removeName: removeName,
     namedPortRows: namedPortRows,
     canSignalProcess: canSignalProcess,
+    liveIdentityMatches: liveIdentityMatches,
     canKillRow: canKillRow,
     killSignal: killSignal,
     openUrl: openUrl,

@@ -43,8 +43,12 @@ Item {
     root.rawProcess = []
     root.rawDocker = []
     ssProc.running = false
-    ssProc.command = root.parsedSettings.includeUdp ? ["ss", "-ltunpH"] : ["ss", "-ltnpH"]
+    ssProc.command = root.cappedStdout(root.parsedSettings.includeUdp ? "ss -ltunpH" : "ss -ltnpH")
     ssProc.running = true
+  }
+
+  function cappedStdout(producer) {
+    return ["sh", "-c", producer + " | head -c " + String(Model.maxOutputBytes())]
   }
 
   function rebuild() {
@@ -118,7 +122,7 @@ Item {
         if (root.parsedSettings.includeDocker) {
           root.dockerPending = true
           dockerProc.running = false
-          dockerProc.command = ["docker", "ps", "--format", "{{.ID}}\t{{.Names}}\t{{.Ports}}"]
+          dockerProc.command = root.cappedStdout("docker ps --format '{{.ID}}\\t{{.Names}}\\t{{.Ports}}'")
           dockerProc.running = true
         } else {
           root.rawDocker = []
@@ -127,7 +131,7 @@ Item {
     }
     stderr: StdioCollector { waitForEnd: true }
     onExited: function(code) {
-      if (code !== 0) {
+      if (code !== 0 && code !== 141) {
         root.errorText = "Could not read listening sockets"
         root.rawProcess = []
         root.loading = false
@@ -147,7 +151,7 @@ Item {
       }
     }
     onExited: function(code) {
-      if (code !== 0) {
+      if (code !== 0 && code !== 141) {
         root.rawDocker = []
         root.dockerPending = false
         root.rebuild()
