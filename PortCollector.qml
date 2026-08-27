@@ -17,6 +17,9 @@ Item {
   property var rawProcess: []
   property var rawDocker: []
   property bool dockerPending: false
+  property bool enrichPending: false
+  property bool refreshPending: false
+  property string dockerEndpoint: ""
 
   readonly property var parsedSettings: {
     var docker = settings && settings.includeDocker
@@ -24,7 +27,7 @@ Item {
     return {
       killSignal: Model.killSignal(settings && settings.killSignal),
       includeUdp: udp === true || udp === "On",
-      includeDocker: docker !== false && docker !== "Off",
+      includeDocker: docker === true || docker === "On",
       ignoredPorts: String((settings && settings.ignoredPorts) || "53,631,5353"),
       httpsPorts: String((settings && settings.httpsPorts) || "443,8443"),
       refreshIntervalSec: Math.max(2, Math.min(120, parseInt(settings && settings.refreshIntervalSec, 10) || 5))
@@ -38,13 +41,28 @@ Item {
   }
 
   function refresh() {
+    if (root.loading) {
+      root.refreshPending = true
+      return
+    }
     root.loading = true
     root.errorText = ""
     root.rawProcess = []
     root.rawDocker = []
+    root.dockerPending = false
+    root.enrichPending = false
     ssProc.running = false
     ssProc.command = root.cappedStdout(root.parsedSettings.includeUdp ? "ss -ltunpH" : "ss -ltnpH")
     ssProc.running = true
+  }
+
+  function finishCycle() {
+    if (root.enrichPending || root.dockerPending) return
+    root.loading = false
+    if (root.refreshPending) {
+      root.refreshPending = false
+      Qt.callLater(root.refresh)
+    }
   }
 
   function cappedStdout(producer) {
@@ -59,10 +77,11 @@ Item {
       rows[i] = Model.enrichProcess(rows[i], root.pendingMeta[String(rows[i].pid)] || {})
     }
     root.listeners = rows
-    root.loading = false
+    root.finishCycle()
   }
 
   function startEnrich(rows) {
+    root.enrichPending = true
     var pids = []
     var seen = {}
     for (var i = 0; i < rows.length; i++) {
@@ -81,6 +100,7 @@ Item {
 
   function enrichNext() {
     if (!root.enrichQueue.length) {
+      root.enrichPending = false
       rebuild()
       return
     }
@@ -118,15 +138,23 @@ Item {
       waitForEnd: true
       onStreamFinished: {
         root.rawProcess = Model.parseSs(text)
-        root.startEnrich(root.rawProcess)
         if (root.parsedSettings.includeDocker) {
           root.dockerPending = true
-          dockerProc.running = false
-          dockerProc.command = root.cappedStdout("docker ps --format '{{.ID}}\\t{{.Names}}\\t{{.Ports}}'")
-          dockerProc.running = true
+          root.dockerEndpoint = ""
+          var envHost = String(Quickshell.env("DOCKER_HOST") || "")
+          if (envHost && envHost.indexOf("unix://") !== 0) {
+            root.errorText = "Remote Docker endpoint ignored"
+            root.dockerPending = false
+          } else {
+            dockerContextProc.running = false
+            dockerContextProc.command = ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"]
+            dockerContextProc.running = true
+          }
         } else {
           root.rawDocker = []
+          root.dockerPending = false
         }
+        root.startEnrich(root.rawProcess)
       }
     }
     stderr: StdioCollector { waitForEnd: true }
@@ -134,8 +162,32 @@ Item {
       if (code !== 0 && code !== 141) {
         root.errorText = "Could not read listening sockets"
         root.rawProcess = []
-        root.loading = false
+        root.enrichPending = false
+        root.dockerPending = false
+        root.finishCycle()
       }
+    }
+  }
+
+  Process {
+    id: dockerContextProc
+    running: false
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.dockerEndpoint = String(text || "").trim()
+    }
+    onExited: function(code) {
+      if (code !== 0 || root.dockerEndpoint.indexOf("unix://") !== 0) {
+        root.rawDocker = []
+        root.dockerPending = false
+        if (code === 0 && root.dockerEndpoint)
+          root.errorText = "Remote Docker context ignored"
+        root.rebuild()
+        return
+      }
+      dockerProc.running = false
+      dockerProc.command = root.cappedStdout("docker ps --no-trunc --format '{{.ID}}\\t{{.Names}}\\t{{.Ports}}'")
+      dockerProc.running = true
     }
   }
 
@@ -179,48 +231,6 @@ Item {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.storeMeta(root.enrichPid, { startTime: Model.parseStatStartTime(text) })
-    }
-    onExited: {
-      cmdProc.running = false
-      cmdProc.command = ["cat", "/proc/" + root.enrichPid + "/cmdline"]
-      cmdProc.running = true
-    }
-  }
-
-  Process {
-    id: cmdProc
-    running: false
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.storeMeta(root.enrichPid, { command: Model.parseCmdline(text) })
-    }
-    onExited: {
-      cwdProc.running = false
-      cwdProc.command = ["readlink", "/proc/" + root.enrichPid + "/cwd"]
-      cwdProc.running = true
-    }
-  }
-
-  Process {
-    id: cwdProc
-    running: false
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.storeMeta(root.enrichPid, { cwd: String(text || "").trim() })
-    }
-    onExited: {
-      exeProc.running = false
-      exeProc.command = ["readlink", "/proc/" + root.enrichPid + "/exe"]
-      exeProc.running = true
-    }
-  }
-
-  Process {
-    id: exeProc
-    running: false
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.storeMeta(root.enrichPid, { exe: String(text || "").trim() })
     }
     onExited: root.enrichNext()
   }

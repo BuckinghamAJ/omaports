@@ -5,14 +5,15 @@ SHELL      := /bin/bash
 
 .PHONY: link unlink test validate enable disable restart
 
-# Point Omarchy at this checkout. The plugins dir entry is a symlink to the
-# repo; files inside the repo stay real. Validate forbids symlinks *inside*
+# Point Omarchy at this checkout. Refuse to delete an existing copied plugin;
+# the plugins dir entry must be absent or a symlink. Validate forbids symlinks *inside*
 # the folder, and plugin remove already knows how to unlink a checkout.
 link:
 	mkdir -p "$(dir $(PLUGIN_DIR))"
 	@if [[ -e $(PLUGIN_DIR) && ! -L $(PLUGIN_DIR) ]]; then \
-	  echo "replacing copied plugin directory with a symlink"; \
-	  rm -rf "$(PLUGIN_DIR)"; \
+	  echo "refusing to replace non-symlink plugin directory: $(PLUGIN_DIR)" >&2; \
+	  echo "remove it explicitly if you intend to replace it" >&2; \
+	  exit 1; \
 	fi
 	ln -sfn "$(REPO)" "$(PLUGIN_DIR)"
 	@echo "linked $(PLUGIN_DIR) -> $(REPO)"

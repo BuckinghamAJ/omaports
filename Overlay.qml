@@ -53,7 +53,7 @@ Item {
     id: collector
     settings: ({
       killSignal: "TERM",
-      includeDocker: "On",
+      includeDocker: "Off",
       includeUdp: "Off",
       ignoredPorts: "53,631,5353",
       httpsPorts: "443,8443",

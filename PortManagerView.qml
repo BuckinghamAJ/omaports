@@ -21,6 +21,8 @@ Item {
   property bool cursorActive: false
   property bool confirmOpen: false
   property var pendingRow: null
+  property string stopContainerId: ""
+  property string inspectedContainerId: ""
   property string statusText: ""
   readonly property bool searchFocused: !!(searchField && searchField.activeFocus)
   readonly property bool listFocused: !searchFocused && cursorActive
@@ -230,9 +232,11 @@ Item {
   function runKill(row) {
     if (!row) return
     if (row.kind === "container") {
-      stopProc.command = ["docker", "stop", row.containerId]
-      stopProc.running = false
-      stopProc.running = true
+      stopContainerId = String(row.containerId || "")
+      inspectedContainerId = ""
+      inspectProc.command = ["docker", "container", "inspect", "--format", "{{.Id}}", stopContainerId]
+      inspectProc.running = false
+      inspectProc.running = true
       return
     }
     if (!Model.canSignalProcess(row, collector.uid, row.startTime)) {
@@ -259,6 +263,25 @@ Item {
     onExited: function(code) {
       flashStatus(code === 0 ? "Signaled" : "Kill failed")
       if (collector) collector.refresh()
+    }
+  }
+
+  Process {
+    id: inspectProc
+    running: false
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.inspectedContainerId = String(text || "").trim()
+    }
+    onExited: function(code) {
+      if (code !== 0 || root.inspectedContainerId !== root.stopContainerId) {
+        flashStatus("Container changed or disappeared")
+        if (collector) collector.refresh()
+        return
+      }
+      stopProc.command = ["docker", "stop", root.stopContainerId]
+      stopProc.running = false
+      stopProc.running = true
     }
   }
 

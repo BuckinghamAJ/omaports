@@ -70,7 +70,7 @@ assert.equal(Model.parseSs(overflowSs.join("\n")).length, Model.MAX_ROWS)
 
 var overflowDocker = []
 for (var d = 0; d < Model.MAX_ROWS + 10; d++) {
-  overflowDocker.push("id" + d + "\tc" + d + "\t0.0.0.0:" + (4000 + (d % 20000)) + "->80/tcp")
+  overflowDocker.push(("000000000000" + d.toString(16)).slice(-12) + "\tc" + d + "\t0.0.0.0:" + (4000 + (d % 20000)) + "->80/tcp")
 }
 assert.equal(Model.parseDockerPs(overflowDocker.join("\n")).length, Model.MAX_ROWS)
 
@@ -82,17 +82,18 @@ assert.equal(Model.openUrl({ host: "127.0.0.1", port: 3000 }, ""), "http://127.0
 assert.equal(Model.openUrl({ host: "0.0.0.0", port: 443 }, "443,8443"), "https://127.0.0.1:443")
 assert.equal(Model.openUrl({ host: "::", port: 8080 }, ""), "http://[::1]:8080")
 
-var docker = Model.parseDockerPs("abc123\tweb\t0.0.0.0:3000->80/tcp, 127.0.0.1:3001->80/tcp\n")
+var docker = Model.parseDockerPs("abc123abc123\tweb\t0.0.0.0:3000->80/tcp, 127.0.0.1:3001->80/tcp\n")
 assert.equal(docker.length, 2)
-assert.equal(docker[0].containerId, "abc123")
+assert.equal(docker[0].containerId, "abc123abc123")
 assert.equal(docker[0].containerName, "web")
 assert.equal(docker[0].port, 3000)
 assert.equal(docker[0].kind, "container")
 assert.equal(docker[0].exposed, true)
 assert.equal(docker[1].port, 3001)
 assert.equal(docker[1].exposed, false)
+assert.equal(Model.parseDockerPs("not-an-id\tevil\t0.0.0.0:9999->80/tcp\n").length, 0)
 
-var dualStackDocker = Model.parseDockerPs("abc123\tweb\t0.0.0.0:3000->80/tcp, [::]:3000->80/tcp\n")
+var dualStackDocker = Model.parseDockerPs("abc123abc123\tweb\t0.0.0.0:3000->80/tcp, [::]:3000->80/tcp\n")
 assert.equal(dualStackDocker.length, 2)
 var collapsedDocker = Model.dedupeSockets(dualStackDocker)
 assert.equal(collapsedDocker.length, 1)
@@ -144,5 +145,8 @@ assert.equal(Model.parseNamedInput("nope"), null)
 
 var count = Model.devPortCount(named, 1000)
 assert.ok(count >= 1)
+
+assert.equal(Model.parseSettings("").includeDocker, false)
+assert.equal(Model.parseSettings('{"includeDocker":true}').includeDocker, true)
 
 console.log("ok")
