@@ -311,6 +311,7 @@ function parseDockerPs(raw) {
     if (parts.length < 3) continue
     var id = trim(parts[0])
     var name = trim(parts[1])
+    if (!/^[0-9a-f]{12,64}$/i.test(id)) continue
     var published = parseDockerPorts(parts.slice(2).join("\t"))
     for (var p = 0; p < published.length; p++) {
       out.push({
@@ -537,7 +538,7 @@ function parseSettings(raw) {
   return {
     killSignal: killSignal(parsed.killSignal),
     includeUdp: parsed.includeUdp === true,
-    includeDocker: parsed.includeDocker !== false,
+    includeDocker: parsed.includeDocker === true,
     ignoredPorts: String(parsed.ignoredPorts === undefined ? "53,631,5353" : parsed.ignoredPorts),
     httpsPorts: String(parsed.httpsPorts || "443,8443"),
     refreshIntervalSec: Math.max(2, Math.min(120, parseInt(parsed.refreshIntervalSec, 10) || 5))

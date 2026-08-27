@@ -21,7 +21,7 @@
     "defaults": {
       "killSignal": "TERM",
       "includeUdp": false,
-      "includeDocker": true,
+      "includeDocker": false,
       "ignoredPorts": "53,631,5353",
       "httpsPorts": "443,8443",
       "refreshIntervalSec": 5
@@ -40,7 +40,7 @@
         "type": "enum",
         "label": "Docker published ports",
         "options": ["On", "Off"],
-        "defaultValue": "On"
+        "defaultValue": "Off"
       },
       {
         "key": "includeUdp",
